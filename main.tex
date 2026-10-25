@@ -1,0 +1,1034 @@
+% !TEX TS-program = xelatex
+% !TEX encoding = UTF-8 Unicode
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% ==============================================================================
+% 1. CẤU HÌNH PHÔNG CHỮ & GÓI CẦN THIẾT
+% ==============================================================================
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[vietnamese]{babel}
+\usepackage{tikz,listings,booktabs,array,xcolor,colortbl}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,backgrounds,shapes.geometric,patterns,decorations.pathreplacing,shadows}
+\usepackage{appendixnumberbeamer}
+\usepackage{url}
+\urlstyle{same}
+
+% ==============================================================================
+% 2. BẢNG MÀU CHUẨN
+% ==============================================================================
+\definecolor{tealD}{HTML}{0F6E56} % Điều tốt, Isolate
+\definecolor{tealL}{HTML}{E1F5EE}
+\definecolor{purpD}{HTML}{3B3486} % Tiêu đề, từ khoá, Main/UI
+\definecolor{purpL}{HTML}{EEEDFE}
+\definecolor{redD}{HTML}{A32D2D}  % Cảnh báo, Freeze, UI block
+\definecolor{redL}{HTML}{FCEBEB}
+\definecolor{grayD}{HTML}{444441} % Chữ phụ, viền
+\definecolor{grayL}{HTML}{F6F5F2} % Nền khối trung tính
+\definecolor{tickG}{HTML}{1D9E75} % Frame xanh 16,6 ms
+\definecolor{navyD}{HTML}{183B56} % Màu header bảng mẫu ĐHBK
+\definecolor{codebg}{HTML}{F8F9FA} % Nền code
+\definecolor{codeframe}{HTML}{DDE1E5}
+
+% ==============================================================================
+% 3. CẤU HÌNH GIAO DIỆN BEAMER THEO MẪU BÁCH KHOA
+% ==============================================================================
+\usetheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeameroption{hide notes}
+
+% Nền trắng hoàn toàn
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{normal text}{fg=black}
+\setbeamercolor{frametitle}{fg=black}
+\setbeamerfont{frametitle}{size=\Large,series=\bfseries}
+\setbeamertemplate{frametitle}{%
+  \vspace*{0.28cm}%
+  {\usebeamerfont{frametitle}\insertframetitle\par}%
+  \vspace*{0.1cm}%
+}
+
+\setbeamertemplate{footline}{%
+  \ifnum\thepage>1
+    \begin{beamercolorbox}[wd=\paperwidth,ht=2.6ex,dp=1.1ex,leftskip=0.8cm,rightskip=0.8cm]{footline}%
+      {\scriptsize\color{grayD!80} Chủ đề 03: Xử lý tác vụ nặng với Isolate (hàm compute)}%
+      \hfill%
+      {\scriptsize\color{grayD!80} \insertframenumber\,/\,\inserttotalframenumber}%
+    \end{beamercolorbox}%
+  \fi
+}
+
+% Định dạng khối hộp
+\setbeamercolor{block title}{fg=purpD,bg=purpL}
+\setbeamercolor{block body}{fg=black,bg=grayL}
+\setbeamercolor{block title alerted}{fg=redD,bg=redL}
+\setbeamercolor{block body alerted}{fg=black,bg=redL!40}
+
+% ==============================================================================
+% 4. CẤU HÌNH LISTINGS CHO DART
+% ==============================================================================
+\lstdefinelanguage{Dart}{
+  morekeywords={as,async,await,break,case,catch,class,const,continue,else,enum,extends,
+    final,finally,for,if,import,in,is,late,new,null,on,required,return,static,super,
+    switch,this,throw,try,var,void,while,with,yield,int,double,bool,String,List,Map,
+    Future,Duration,Stopwatch,compute},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+}
+
+\lstset{
+  language=Dart,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{purpD}\bfseries,
+  commentstyle=\color{grayD!80}\itshape,
+  stringstyle=\color{tealD},
+  backgroundcolor=\color{codebg},
+  frame=single,
+  rulecolor=\color{codeframe},
+  showstringspaces=false,
+  columns=fullflexible,
+  breaklines=true,
+  xleftmargin=3pt,
+  xrightmargin=3pt,
+  aboveskip=2pt,
+  belowskip=2pt
+}
+
+% Macro chèn ảnh placeholder
+\newcommand{\ph}[3]{%
+  \begin{tikzpicture}
+    \node[draw=grayD!40, fill=grayL, dashed, rounded corners=3pt, minimum width=#1, minimum height=#2, align=center, inner sep=3pt] {
+      \scriptsize\color{grayD} [Chèn ảnh: #3]
+    };
+  \end{tikzpicture}%
+}
+
+% Macro số chú thích code
+\newcommand{\cnum}[1]{\textcolor{purpD}{\textbf{(#1)}}}
+
+% ==============================================================================
+% BẮT ĐẦU TÀI LIỆU
+% ==============================================================================
+\begin{document}
+
+% ------------------------------------------------------------------------------
+% SLIDE 1 - TRANG BÌA (Đúng mẫu Bách Khoa Đà Nẵng)
+% ------------------------------------------------------------------------------
+\begin{frame}[plain]
+  \begin{center}
+    {\large\bfseries TRƯỜNG ĐẠI HỌC BÁCH KHOA\par}
+    {\normalsize\bfseries KHOA ĐIỆN TỬ VÀ TRÍ TUỆ NHÂN TẠO\par}
+  \end{center}
+  \vspace{0.35cm}
+  \hspace*{0.5cm}
+  \begin{minipage}{0.9\textwidth}
+    {\footnotesize\textbf{Báo cáo chuyên sâu}\par}
+    {\footnotesize Môn: Lập trình Đa nền tảng\par}
+  \end{minipage}
+  \vspace{0.45cm}
+  \begin{center}
+    {\Large\bfseries Xử lý tác vụ nặng với Isolate (hàm \texttt{compute})\\ để giữ giao diện mượt\par}
+    \vspace{0.2cm}
+    {\footnotesize\color{grayD} Chủ đề 03 -- Khối kiến thức 1: Nền tảng Dart nâng cao và bất đồng bộ\par}
+  \end{center}
+  \vspace{0.35cm}
+  \begin{flushright}
+    \begin{tabular}{r l}
+      \textbf{SVTH:} & 1. Nguyễn Đức Hải \\
+                     & 2. Phạm Thị Hồng Nhung -- 106230021 \\
+      \textbf{GVHD:} & [Tên giảng viên]
+    \end{tabular}
+    \hspace*{0.6cm}
+  \end{flushright}
+  \vfill
+  \begin{center}
+    {\footnotesize Đà Nẵng, 2026\par}
+  \end{center}
+  \note{Giới thiệu đề tài Chủ đề 03: Xử lý tác vụ nặng với Isolate và hàm compute để giữ giao diện mượt mà.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 2 - MỤC LỤC
+% ------------------------------------------------------------------------------
+\begin{frame}{Nội dung báo cáo}
+  \vspace{0.2cm}
+  \begin{enumerate}
+    \setlength{\itemsep}{0.32cm}
+    \item \textbf{Vấn đề hiệu năng}: UI Jank, Freeze và cơ chế Event Loop trong Dart
+    \item \textbf{Mô hình Isolate}: Cơ chế hoạt động và giải pháp với hàm \texttt{compute()}
+    \item \textbf{Hiện thực mã nguồn}: Thiết kế kiến trúc và phân tích mã nguồn
+    \item \textbf{Thực nghiệm \& Đánh giá}: Demo ứng dụng, kết quả đo thực tế và kết luận
+  \end{enumerate}
+
+  \vspace{0.5cm}
+  \begin{block}{\scriptsize\bfseries Câu hỏi định hướng}
+    \scriptsize\centering \textit{"Làm sao xử lý tác vụ tính toán nặng mà giao diện Flutter vẫn phản hồi mượt mà?"}
+  \end{block}
+  \note{Trình bày tổng quan mục lục gồm 4 phần chính, dẫn dắt câu hỏi cốt lõi của bài báo cáo.}
+\end{frame}
+
+% ==============================================================================
+% PHẦN 1 - CƠ SỞ LÝ THUYẾT: VẤN ĐỀ
+% ==============================================================================
+
+% ------------------------------------------------------------------------------
+% SLIDE 3 - FRAME VÀ NGÂN SÁCH THỜI GIAN
+% ------------------------------------------------------------------------------
+\begin{frame}{Frame và ngân sách thời gian}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \setlength{\itemsep}{0.12cm}
+        \item Mỗi frame có \textbf{ngân sách thời gian}: 60 Hz $\rightarrow$ \textbf{16,6 ms}; 120 Hz $\rightarrow$ \textbf{8,3 ms}.
+        \item Một frame đi qua \textit{Build $\rightarrow$ Layout $\rightarrow$ Paint} (\textbf{UI thread}, Dart) rồi \textit{Raster} (\textbf{Raster thread}, GPU).
+        \item \textbf{Jank}: Frame vượt ngân sách $\rightarrow$ giật khung hình.
+        \item \textbf{Freeze}: Nhiều frame liên tiếp bị bỏ $\rightarrow$ đứng giao diện.
+        \item \textbf{Nguyên nhân gốc}: Code Dart nặng chạy \textbf{đồng bộ} trên UI thread.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \centering
+      \begin{tikzpicture}[
+        scale=0.88, every node/.style={transform shape},
+        stepbox/.style={draw=purpD, fill=white, thick, rounded corners=3pt, font=\tiny\bfseries, minimum height=0.65cm, minimum width=1.05cm, align=center},
+        gpubox/.style={draw=tealD, fill=white, thick, rounded corners=3pt, font=\tiny\bfseries, minimum height=0.65cm, minimum width=1.15cm, align=center}
+      ]
+        % UI Thread container
+        \draw[fill=purpL!50, draw=purpD!40, rounded corners=5pt] (-0.2, -0.1) rectangle (4.1, 1.5);
+        \node[anchor=west, font=\tiny\bfseries, purpD] at (-0.05, 1.3) {UI Thread (Code Dart)};
+        \node[stepbox] (b) at (0.5, 0.6) {Build\\{\tiny\color{grayD} Widget}};
+        \node[stepbox] (l) at (1.85, 0.6) {Layout\\{\tiny\color{grayD} Render}};
+        \node[stepbox] (p) at (3.25, 0.6) {Paint\\{\tiny\color{grayD} Canvas}};
+
+        % GPU container
+        \draw[fill=tealL!50, draw=tealD!40, rounded corners=5pt] (4.4, -0.1) rectangle (6.1, 1.5);
+        \node[anchor=west, font=\tiny\bfseries, tealD] at (4.5, 1.3) {Raster (GPU)};
+        \node[gpubox] (r) at (5.25, 0.6) {Rasterize\\{\tiny\color{grayD} Pixels}};
+
+        % Connectors
+        \draw[-{Stealth[length=3.5pt]}, purpD, thick] (b) -- (l);
+        \draw[-{Stealth[length=3.5pt]}, purpD, thick] (l) -- (p);
+        \draw[-{Stealth[length=3.5pt]}, grayD, thick, dashed] (p) -- node[above, font=\fontsize{4.8pt}{5.8pt}\selectfont\color{grayD}] {Layer} (r);
+
+        % Budget line
+        \draw[{Stealth[length=3.5pt]}-{Stealth[length=3.5pt]}, redD, thick] (-0.2, -0.4) -- (6.1, -0.4)
+          node[midway, below=2pt, font=\tiny\bfseries, redD] {Ngân sách: 16,6 ms (60 Hz) / 8,3 ms (120 Hz)};
+      \end{tikzpicture}
+
+      \vspace{0.25cm}
+      \begin{block}{\scriptsize\bfseries Khung chốt nguyên nhân}
+        \scriptsize Nếu tác vụ Dart chiếm UI thread lâu hơn 16,6 ms thì không kịp dựng frame mới $\rightarrow$ Jank/Freeze.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \note{Giải thích vì sao có mốc 16,6 ms; nhấn mạnh code Dart nằm ở UI thread nên nếu chiếm quá lâu sẽ gây gián đoạn dựng frame.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 4 - DART ĐƠN LUỒNG: ISOLATE CHÍNH VÀ EVENT LOOP
+% ------------------------------------------------------------------------------
+\begin{frame}{Dart đơn luồng: Isolate chính và Event Loop}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \setlength{\itemsep}{0.12cm}
+        \item Mỗi \textbf{Isolate} có 1 luồng Dart và \textbf{Event Loop riêng}; Flutter khởi động với \textbf{Main Isolate}.
+        \item Hai hàng đợi: \textbf{Microtask queue trước}, rồi \textbf{Event queue} (chạm, timer, I/O, vẽ frame).
+        \item \textbf{Run-to-completion}: Mỗi tác vụ chạy đến khi hoàn tất, không bị ngắt giữa chừng.
+        \item Tác vụ đồng bộ dài $\rightarrow$ mọi sự kiện sau nó, kể cả vẽ frame, đều phải chờ.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \centering
+      \resizebox{\linewidth}{!}{%
+        \begin{tikzpicture}[
+          scale=0.88, every node/.style={transform shape},
+          queueitem/.style={draw=grayD!60, fill=white, rounded corners=3pt, font=\fontsize{6pt}{7pt}\selectfont, inner sep=3pt, align=center},
+          heavyitem/.style={draw=redD, fill=redL, thick, rounded corners=3pt, font=\fontsize{6pt}{7pt}\selectfont\bfseries, text=redD, inner sep=3pt, align=center}
+        ]
+          % Microtask Queue box
+          \draw[fill=purpL!40, draw=purpD!50, rounded corners=4pt] (-0.3, 2.05) rectangle (4.9, 2.85);
+          \node[anchor=west, font=\tiny\bfseries, purpD] at (-0.15, 2.65) {Microtask Queue (Ưu tiên cao nhất)};
+          \node[draw=purpD, fill=white, rounded corners=2pt, font=\fontsize{6pt}{7pt}\selectfont, inner sep=2pt] at (3.5, 2.35) {Tác vụ nội bộ VM};
+
+          % Event Queue box
+          \draw[fill=grayL, draw=grayD!40, rounded corners=4pt] (-0.3, 0.45) rectangle (4.9, 1.8);
+          \node[anchor=west, font=\tiny\bfseries, grayD] at (-0.15, 1.6) {Event Queue (Xử lý lần lượt - FIFO)};
+
+          \node[queueitem] (q1) at (0.35, 0.95) {Chạm\\{\tiny\color{grayD} user}};
+          \node[heavyitem] (q2) at (1.55, 0.95) {Vòng lặp nặng\\{\tiny\color{redD} CPU-bound}};
+          \node[queueitem, draw=tickG, fill=tealL!30] (q3) at (2.85, 0.95) {\bfseries Frame\\{\tiny\color{tealD} Vsync}};
+          \node[queueitem] (q4) at (4.0, 0.95) {Timer\\{\tiny\color{grayD} I/O}};
+
+          % Event loop and main isolate
+          \node[draw=navyD, fill=navyD!10, circle, thick, minimum size=1.1cm, align=center, font=\tiny\bfseries] (loop) at (6.0, 1.6) {Event\\Loop};
+          \node[draw=purpD, fill=purpL, rounded corners=4pt, thick, minimum width=1.3cm, minimum height=1.3cm, align=center, font=\tiny\bfseries] (main) at (7.8, 1.6) {Main\\Isolate\\{\tiny(UI)}};
+
+          \draw[-{Stealth[length=4pt]}, purpD, thick] (4.9, 2.45) -| (loop.north);
+          \draw[-{Stealth[length=4pt]}, grayD, thick] (4.7, 0.95) -| (loop.south);
+          \draw[-{Stealth[length=4pt]}, navyD, thick] (loop.east) -- (main.west);
+
+          % Warning note
+          \node[anchor=north, redD, font=\fontsize{6pt}{7pt}\selectfont\bfseries, align=center] at (2.3, 0.35) { Vòng lặp nặng đang chạy $\rightarrow$ Frame phải chờ $\rightarrow$ UI Freeze!};
+        \end{tikzpicture}%
+      }
+
+      \vspace{0.15cm}
+      \begin{alertblock}{\scriptsize\bfseries Bản chất đơ giao diện (UI Freeze)}
+        \scriptsize Sự kiện vẽ frame nằm trong Event queue nhưng bị chặn bởi một tác vụ đồng bộ chạy quá lâu.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+  \note{Dart không có luồng chia sẻ bộ nhớ như Java; mỗi isolate có bộ nhớ riêng và event loop riêng. Tác vụ chạy run-to-completion nên tác vụ nặng làm nghẽn toàn bộ hàng đợi.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 5 - MINH HOẠ EVENT LOOP BẰNG CODE
+% ------------------------------------------------------------------------------
+\begin{frame}[fragile]{Minh hoạ Event Loop bằng code}
+  \vspace{-0.25cm}
+  {\scriptsize\color{grayD} Minh hoạ thứ tự ưu tiên trong Event Loop của Dart (mô hình lý thuyết)}
+  \vspace{0.05cm}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+\begin{lstlisting}
+import 'dart:async';
+
+void main() {
+  print('1 sync');
+  Future(() => print('4 event')); // event queue
+  scheduleMicrotask(() => print('3 microtask')); // microtask
+  print('2 sync');
+}
+// Output: 1 sync -> 2 sync -> 3 microtask -> 4 event
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{itemize}
+        \setlength{\itemsep}{0.08cm}
+        \item \textbf{Code đồng bộ chạy trước (1, 2)}: Nằm trực tiếp trong tác vụ hiện tại của Main Isolate.
+        \item \textbf{Microtask queue chạy trước (3)}: Được xử lý xong toàn bộ trước khi Event queue bắt đầu.
+        \item \textbf{Event queue chạy sau (4)}: Tác vụ \texttt{Future} nằm ở hàng đợi sự kiện.
+        \item \textbf{Nền tảng hiểu Freeze}: Nếu tác vụ hiện tại kéo dài (CPU-bound), cả hai hàng đợi chỉ biết chờ.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Chỉ ra thứ tự in: code đồng bộ luôn xong trước, microtask ưu tiên hơn event queue; nếu tác vụ đồng bộ chạy lâu thì sự kiện sau không được xử lý.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 6 - ASYNC/AWAIT KHÔNG PHẢI ĐA LUỒNG
+% ------------------------------------------------------------------------------
+\begin{frame}[fragile]{\texttt{async/await} không phải đa luồng}
+  \begin{table}
+    \scriptsize
+    \centering
+    \begin{tabular}{p{2.6cm} >{\raggedright\arraybackslash}p{4.6cm} >{\raggedright\arraybackslash}p{5.0cm}}
+      \toprule
+      \rowcolor{purpL}
+      \textbf{Tiêu chí} & \textbf{I/O-bound} (HTTP, file, DB) & \textbf{CPU-bound} (vòng lặp, parse, mã hoá) \\
+      \midrule
+      \textbf{Thời gian đi đâu?} & Chờ thiết bị/mạng, CPU rảnh & Chính CPU của luồng Dart tính toán \\
+      \textbf{\texttt{Future/await} đủ chưa?} & \textbf{Đủ} -- Event Loop rảnh khi chờ & \textbf{Không} -- vẫn chiếm giữ UI thread \\
+      \textbf{Giải pháp} & Dùng \texttt{async/await} thông thường & \textbf{Phải dùng Isolate / \texttt{compute}} \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  \vspace{0.1cm}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+\begin{lstlisting}
+Future<int> heavy() async {
+  return _heavyLoop(1500000000); // runs SYNCHRONOUSLY
+} // on the UI thread!
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{block}{\scriptsize\bfseries Chốt kiến thức quan trọng}
+        \scriptsize \textbf{\texttt{async} chỉ đổi cách CHỜ, không đổi NƠI CHẠY.} Code đồng bộ bên trong một hàm \texttt{async} vẫn chiếm dụng UI thread cho đến khi gặp từ khoá \texttt{await} đầu tiên.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \note{Đây là hiểu nhầm phổ biến nhất; async chỉ nhường khi chờ I/O, còn vòng lặp tính toán vẫn chiếm cứng UI thread.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 7 - HỆ QUẢ TRÊN DÒNG THỜI GIAN FRAME
+% ------------------------------------------------------------------------------
+\begin{frame}{Hệ quả trên dòng thời gian frame}
+  \centering
+  \begin{tikzpicture}[scale=0.88, every node/.style={transform shape}]
+    % 1. Main Thread
+    \node[anchor=west, font=\scriptsize\bfseries, redD] at (0, 3.8) {1. Chạy trực tiếp trên Main Thread (Không dùng Isolate):};
+    \draw[-{Stealth[length=4pt]}, grayD, thick] (0, 3.0) -- (12.6, 3.0) node[right, font=\tiny\bfseries] {Thời gian};
+    \node[anchor=east, font=\tiny\bfseries, grayD] at (-0.1, 3.0) {UI Thread};
+
+    \foreach \x in {0.3, 0.8, 1.3, 1.8} {
+      \draw[fill=tickG, draw=tealD!80, rounded corners=1pt] (\x, 2.65) rectangle (\x+0.35, 3.35);
+    }
+    \draw[fill=redL, draw=redD, thick, rounded corners=3pt] (2.4, 2.55) rectangle (9.6, 3.45);
+    \node[redD, font=\scriptsize\bfseries] at (6.0, 3.0) {Tác vụ nặng chiếm UI Thread ($\sim$ 1.800 ms) $\rightarrow$ MẤT FRAME (UI Freeze)};
+
+    \foreach \x in {9.9, 10.4, 10.9, 11.4, 11.9} {
+      \draw[fill=tickG, draw=tealD!80, rounded corners=1pt] (\x, 2.65) rectangle (\x+0.35, 3.35);
+    }
+
+    % 2. Compute
+    \node[anchor=west, font=\scriptsize\bfseries, tealD] at (0, 1.8) {2. Chạy với \texttt{compute()} (Chuyển sang Background Isolate):};
+    \draw[-{Stealth[length=4pt]}, grayD, thick] (0, 1.1) -- (12.6, 1.1) node[right, font=\tiny\bfseries] {Thời gian};
+    \node[anchor=east, font=\tiny\bfseries, purpD] at (-0.1, 1.1) {UI Thread};
+
+    \draw[-{Stealth[length=4pt]}, grayD, thick] (0, 0.0) -- (12.6, 0.0) node[right, font=\tiny\bfseries] {Thời gian};
+    \node[anchor=east, font=\tiny\bfseries, tealD] at (-0.1, 0.0) {Background};
+
+    \foreach \x in {0.3, 0.8, 1.3, 1.8, 2.3, 2.8, 3.3, 3.8, 4.3, 4.8, 5.3, 5.8, 6.3, 6.8, 7.3, 7.8, 8.3, 8.8, 9.3, 9.8, 10.3, 10.8, 11.3, 11.8} {
+      \draw[fill=tickG, draw=tealD!80, rounded corners=1pt] (\x, 0.75) rectangle (\x+0.35, 1.45);
+    }
+    \node[purpD, font=\tiny\bfseries] at (6.0, 1.6) {Liên tục vẽ frame 16,6 ms -- Hoạt ảnh mượt mà};
+
+    \draw[fill=tealL, draw=tealD, thick, rounded corners=3pt] (2.4, -0.35) rectangle (9.6, 0.35);
+    \node[tealD, font=\scriptsize\bfseries] at (6.0, 0.0) {Tác vụ tính toán chạy ngầm trên Background Isolate};
+  \end{tikzpicture}
+
+  \vspace{0.15cm}
+  \begin{center}
+    {\scriptsize\color{grayD} Mỗi vạch xanh đại diện cho một frame hoàn thành trong 16,6 ms.\\
+    Nút 1 và Nút 2 ở phần Demo tái hiện đúng hai dòng thời gian này.}
+  \end{center}
+  \note{Nhấn mạnh: cùng một lượng công việc, chỉ khác nhau ở chỗ chạy trên luồng nào. Chỉ đến phần Demo là minh chứng thực tế.}
+\end{frame}
+
+% ==============================================================================
+% PHẦN 2 - CƠ SỞ LÝ THUYẾT: ISOLATE VÀ COMPUTE
+% ==============================================================================
+
+% ------------------------------------------------------------------------------
+% SLIDE 8 - ISOLATE: MÔ HÌNH ĐỒNG THỜI CỦA DART
+% ------------------------------------------------------------------------------
+\begin{frame}{Isolate: mô hình đồng thời của Dart}
+  \centering
+  \begin{tikzpicture}[scale=0.86, every node/.style={transform shape}]
+    % Left: Traditional Threading
+    \draw[fill=grayL, draw=grayD!30, rounded corners=6pt] (-0.2, -0.2) rectangle (5.0, 3.5);
+    \node[font=\footnotesize\bfseries, grayD] at (2.4, 3.2) {Thread truyền thống (Java, C++)};
+
+    \node[draw=grayD, fill=white, rounded corners=3pt, thick, minimum width=1.8cm, minimum height=0.65cm, font=\scriptsize\bfseries] (ta) at (1.1, 2.3) {Thread A};
+    \node[draw=grayD, fill=white, rounded corners=3pt, thick, minimum width=1.8cm, minimum height=0.65cm, font=\scriptsize\bfseries] (tb) at (3.7, 2.3) {Thread B};
+
+    \node[draw=redD, fill=redL, rounded corners=4pt, thick, minimum width=4.2cm, minimum height=1.0cm, align=center] (sm) at (2.4, 0.7) {
+      \bfseries\color{redD} Shared Memory (Heap chung)\\
+      {\tiny\color{redD!80} Cùng truy cập $\rightarrow$ Cần Mutex/Lock, nguy cơ Race Condition}
+    };
+    \draw[{Stealth[length=3.5pt]}-{Stealth[length=3.5pt]}, redD, thick] (ta) -- (sm.north -| ta);
+    \draw[{Stealth[length=3.5pt]}-{Stealth[length=3.5pt]}, redD, thick] (tb) -- (sm.north -| tb);
+
+    % Divider
+    \draw[dashed, grayD!50, thick] (5.4, -0.2) -- (5.4, 3.5);
+
+    % Right: Dart Isolates
+    \draw[fill=tealL!25, draw=tealD!30, rounded corners=6pt] (5.8, -0.2) rectangle (12.2, 3.5);
+    \node[font=\footnotesize\bfseries, tealD] at (9.0, 3.2) {Dart Isolate (Share-Nothing)};
+
+    \node[draw=purpD, fill=white, rounded corners=4pt, thick, minimum width=2.6cm, minimum height=1.9cm, align=center] (iso1) at (7.3, 1.4) {
+      \bfseries\color{purpD} Main Isolate\\
+      \vspace{0.08cm}
+      {\tiny\color{grayD} $\bullet$ Bộ nhớ riêng}\\
+      {\tiny\color{grayD} $\bullet$ Event Loop riêng}\\
+      {\tiny\color{tealD}\bfseries Chạy UI Thread}
+    };
+
+    \node[draw=tealD, fill=white, rounded corners=4pt, thick, minimum width=2.6cm, minimum height=1.9cm, align=center] (iso2) at (10.7, 1.4) {
+      \bfseries\color{tealD} Isolate Nền\\
+      \vspace{0.08cm}
+      {\tiny\color{grayD} $\bullet$ Bộ nhớ riêng}\\
+      {\tiny\color{grayD} $\bullet$ Event Loop riêng}\\
+      {\tiny\color{purpD}\bfseries Tác vụ nặng}
+    };
+
+    \draw[{Stealth[length=4pt]}-{Stealth[length=4pt]}, tealD, very thick] (iso1) -- (iso2)
+      node[midway, above=2pt, font=\tiny\bfseries, tealD, align=center] {Message Passing\\{\tiny(SendPort / ReceivePort)}};
+  \end{tikzpicture}
+
+  \vspace{0.1cm}
+  \begin{columns}[T]
+    \begin{column}{0.95\textwidth}
+      \begin{itemize}
+        \setlength{\itemsep}{0.08cm}
+        \item \textbf{Không chia sẻ bộ nhớ (Share-nothing)}: Không sợ race condition hay dead-lock, không cần khoá.
+        \item \textbf{Giao tiếp thuần qua thông điệp}: Chỉ truyền dữ liệu thông qua cơ chế sao chép hoặc chuyển giao.
+        \item \textbf{Event Loop riêng}: Isolate nền bận tính toán nặng vẫn không làm đứng UI của Main Isolate.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Về ngôn ngữ, isolate không thể truy cập đối tượng của nhau. Từ Dart 2.15 VM gom vào isolate group có thể chung heap nội bộ nhưng sự cô lập vẫn tuyệt đối.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 9 - GIAO TIẾP GIỮA CÁC ISOLATE
+% ------------------------------------------------------------------------------
+\begin{frame}[fragile]{Giao tiếp giữa các isolate}
+  \vspace{-0.2cm}
+  {\scriptsize\color{grayD} Cơ chế mức thấp bằng cổng thông điệp mà \texttt{compute()} che giấu}
+  \vspace{0.05cm}
+  \begin{columns}[T]
+    \begin{column}{0.62\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{6pt}{7pt}\selectfont]
+Future<int> runWithSpawn(int n) async {
+  final receive = ReceivePort(); // (1)
+  await Isolate.spawn(_worker, [receive.sendPort, n]); // (2)
+  final result = await receive.first as int;
+  receive.close();
+  return result;
+}
+
+void _worker(List<dynamic> args) {
+  final port = args[0] as SendPort;
+  port.send(_heavyLoop(args[1] as int)); // (3)
+}
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \scriptsize
+      \begin{enumerate}
+        \setlength{\itemsep}{0.1cm}
+        \item[\cnum{1}] Khởi tạo \texttt{ReceivePort} ở Main Isolate để nhận kết quả.
+        \item[\cnum{2}] Spawn isolate mới, gửi \texttt{SendPort} kèm tham số n.
+        \item[\cnum{3}] Worker tính toán và gửi kết quả về qua cổng.
+      \end{enumerate}
+      \vspace{0.1cm}
+      \begin{block}{\scriptsize\bfseries Cơ chế dữ liệu}
+        \tiny
+        Dữ liệu vào được \textbf{sao chép} sang isolate nhận.\\
+        Kết quả chuyển về không sao chép nhờ \textbf{\texttt{Isolate.exit}}.\\
+        Không gửi được đối tượng gắn với UI.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \note{Giải thích ReceivePort/SendPort; nhấn mạnh cách này đúng nhưng dài dòng, compute gói gọn toàn bộ quy trình này vào một dòng lệnh.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 10 - BA CÁCH DÙNG ISOLATE
+% ------------------------------------------------------------------------------
+\begin{frame}[fragile]{Ba cách dùng Isolate}
+  \begin{table}
+    \scriptsize
+    \centering
+    \begin{tabular}{p{2.3cm} p{1.3cm} >{\raggedright\arraybackslash}p{3.8cm} >{\raggedright\arraybackslash}p{4.6cm}}
+      \toprule
+      \rowcolor{purpL}
+      \textbf{API} & \textbf{Mức độ} & \textbf{Dùng khi nào} & \textbf{Ghi chú đặc thù} \\
+      \midrule
+      \texttt{Isolate.spawn} & Thấp & Worker sống lâu, trao đổi nhiều lần & Tự quản lý \texttt{SendPort/ReceivePort} \\
+      \texttt{Isolate.run} & Trung bình & Tác vụ một lần, trả về \texttt{Future} (Dart $\ge$ 2.19) & Tự spawn, trả kết quả và tự huỷ \\
+      \textbf{\texttt{compute()}} & \textbf{Cao nhất} & \textbf{Tác vụ một lần trong Flutter} & Native: tương đương \texttt{Isolate.run};\newline \textbf{Web: chạy trên event loop hiện tại} \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  \vspace{0.1cm}
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+\begin{lstlisting}
+final r1 = await Isolate.run(() => heavy(n)); // plain Dart
+final r2 = await compute(heavy, n);           // Flutter
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{\scriptsize\bfseries Lựa chọn của nhóm}
+        \scriptsize Nhóm chọn \textbf{\texttt{compute()}} vì phù hợp với tác vụ chạy một lần và API ngắn gọn, chuẩn Flutter.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \note{Nếu hỏi: compute thực chất bọc Isolate.run trên nền tảng native; chọn compute vì tác vụ chạy 1 lần và cú pháp ngắn gọn.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 11 - COMPUTE(): CHỮ KÝ VÀ QUY TẮC
+% ------------------------------------------------------------------------------
+\begin{frame}[fragile]{\texttt{compute()}: chữ ký và quy tắc}
+\begin{lstlisting}
+Future<R> compute<M, R>(
+  ComputeCallback<M, R> callback, // runs in the background isolate
+  M message,                      // single input value
+);
+\end{lstlisting}
+  \vspace{0.1cm}
+  \begin{enumerate}
+    \setlength{\itemsep}{0.14cm}
+    \item \textbf{Quy tắc 1 (KHUYẾN NGHỊ top-level)}: \texttt{callback} nên là hàm top-level; không dùng closure bắt biến ngoài (tránh kéo theo tham chiếu widget/\texttt{BuildContext}).
+    \item \textbf{Quy tắc 2 (Đúng 1 tham số)}: Chỉ nhận đúng 1 đối số \texttt{message}. Nếu cần nhiều giá trị thì gói vào \texttt{List}, \texttt{Map} hoặc Data Class đơn giản.
+    \item \textbf{Quy tắc 3 (Dữ liệu gửi được)}: \texttt{message}, \texttt{callback} và kết quả phải \textbf{gửi được} giữa các isolate (kiểu cơ bản, danh sách, map, hoặc object thuần dữ liệu).
+    \item \textbf{Quy tắc 4 (Bắt lỗi an toàn)}: Lỗi ném ra trong isolate nền được \textbf{ném lại ở chỗ \texttt{await}} tại Main Isolate $\rightarrow$ bắt bằng \texttt{try/catch}.
+  \end{enumerate}
+  \note{Các quy tắc này sẽ được kiểm tra lại trên mã nguồn của nhóm ở Slide phân tích mã nguồn.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 12 - LUỒNG HOẠT ĐỘNG CỦA COMPUTE()
+% ------------------------------------------------------------------------------
+\begin{frame}{Luồng hoạt động của \texttt{compute()}}
+  \centering
+  \begin{tikzpicture}[scale=0.85, every node/.style={transform shape}]
+    % Swimlane 1: Main Isolate
+    \draw[fill=purpL!40, draw=purpD!40, rounded corners=5pt] (-0.2, 1.8) rectangle (12.6, 3.6);
+    \node[anchor=west, font=\tiny\bfseries, purpD] at (0.0, 3.35) {Làn Main Isolate (UI Thread)};
+
+    \node[draw=purpD, fill=white, rounded corners=3pt, thick, minimum width=2.4cm, minimum height=0.9cm, align=center] (s1) at (1.8, 2.5) {
+      \bfseries\color{purpD} 1. Gọi \texttt{compute}\\
+      {\tiny\color{grayD} Gửi callback \& message}
+    };
+
+    \node[draw=tickG, fill=white, rounded corners=3pt, thick, minimum width=4.2cm, minimum height=0.9cm, align=center] (s_ui) at (6.2, 2.5) {
+      \bfseries\color{tickG} Vẫn vẽ UI mượt mà\\
+      {\tiny\color{grayD} Event Loop liên tục nhận và dựng frame}
+    };
+
+    \node[draw=purpD, fill=white, rounded corners=3pt, thick, minimum width=2.4cm, minimum height=0.9cm, align=center] (s4) at (10.6, 2.5) {
+      \bfseries\color{purpD} 4. Nhận kết quả\\
+      {\tiny\color{grayD} setState() cập nhật UI}
+    };
+
+    % Swimlane 2: Background Isolate
+    \draw[fill=tealL!40, draw=tealD!40, rounded corners=5pt] (-0.2, -0.3) rectangle (12.6, 1.5);
+    \node[anchor=west, font=\tiny\bfseries, tealD] at (0.0, 1.25) {Làn Background Isolate (Spawn ngầm)};
+
+    \node[draw=tealD, fill=white, rounded corners=3pt, thick, minimum width=2.6cm, minimum height=0.9cm, align=center] (s2) at (3.5, 0.5) {
+      \bfseries\color{tealD} 2. Spawn \& Copy\\
+      {\tiny\color{grayD} Tạo Isolate, sao chép dữ liệu}
+    };
+
+    \node[draw=tealD, fill=white, rounded corners=3pt, thick, minimum width=3.0cm, minimum height=0.9cm, align=center] (s3) at (7.0, 0.5) {
+      \bfseries\color{tealD} 3. Thực thi hàm nặng\\
+      {\tiny\color{grayD} Chạy trong bộ nhớ độc lập}
+    };
+
+    \node[draw=tealD, fill=white, rounded corners=3pt, thick, minimum width=2.2cm, minimum height=0.9cm, align=center] (ret) at (10.2, 0.5) {
+      \bfseries\color{tealD} Trả kết quả\\
+      {\tiny\color{grayD} Isolate.exit \& tự giải phóng}
+    };
+
+    % Connecting Arrows
+    \draw[-{Stealth[length=4pt]}, purpD, thick] (s1.south) -- ++(0,-0.4) -| (s2.north);
+    \draw[-{Stealth[length=4pt]}, tealD, thick] (s2) -- (s3);
+    \draw[-{Stealth[length=4pt]}, tealD, thick] (s3) -- (ret);
+    \draw[-{Stealth[length=4pt]}, tealD, thick] (ret.north) -- ++(0,0.4) -| (s4.south);
+  \end{tikzpicture}
+
+  \vspace{0.2cm}
+  \begin{itemize}
+    \setlength{\itemsep}{0.08cm}
+    \item \textbf{Cơ chế sao chép}: Tham số truyền vào được sao chép sang không gian bộ nhớ riêng của Isolate nền.
+    \item \textbf{Trả kết quả \& Tự huỷ}: Kết quả được chuyển giao về và isolate kết thúc.
+  \end{itemize}
+  \note{Nhấn mạnh Main Isolate vẫn chạy Event Loop trong suốt thời gian bước 3, không bị nghẽn việc vẽ frame.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 13 - CHI PHÍ VÀ KHI NÀO NÊN DÙNG
+% ------------------------------------------------------------------------------
+\begin{frame}{Chi phí và khi nào nên dùng}
+  \begin{center}
+    {\normalsize $T_{\text{compute}} \approx T_{\text{spawn}} + T_{\text{copy}} + T_{\text{task}} + T_{\text{return}}$ \quad so với \quad $T_{\text{main}} \approx T_{\text{task}}$ \textbf{\color{redD}(nhưng chặn UI)}}
+  \end{center}
+
+  \vspace{0.1cm}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{\scriptsize\bfseries NÊN DÙNG (Tác vụ CPU-bound nặng)}
+        \scriptsize
+        \begin{itemize}
+          \setlength{\itemsep}{0.08cm}
+          \item Phân tích chuỗi JSON lớn.
+          \item Xử lý điểm ảnh, nén ảnh, resize ảnh.
+          \item Mã hoá dữ liệu, hashing, nén file zip.
+          \item Sắp xếp/lọc danh sách chục nghìn phần tử.
+          \item Vòng lặp thuật toán tính toán nặng.
+          \item \textit{Tài liệu Flutter:} kéo dài \textbf{hơn vài mili-giây} (có nguy cơ rớt frame).
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{alertblock}{\scriptsize\bfseries KHÔNG NÊN DÙNG}
+        \scriptsize
+        \begin{itemize}
+          \setlength{\itemsep}{0.08cm}
+          \item Tác vụ quá nhẹ: chi phí spawn lớn hơn lợi ích mang lại.
+          \item Tác vụ thuần I/O (gọi HTTP, đọc DB): dùng \texttt{async/await}.
+          \item Tác vụ cần truy cập UI, đọc Widget tree hoặc \texttt{BuildContext}.
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.15cm}
+  \begin{center}
+    \fcolorbox{redD}{redL}{\scriptsize\bfseries \textcolor{redD}{CHỐT:}} \textbf{\footnotesize\texttt{compute} giữ UI mượt, KHÔNG làm tác vụ chạy nhanh hơn.}
+  \end{center}
+  \note{Dự kiến câu hỏi compute có nhanh hơn không: trả lời không, thậm chí tốn thêm chi phí tạo isolate và copy dữ liệu.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 14 - CẠM BẪY VÀ GIỚI HẠN
+% ------------------------------------------------------------------------------
+\begin{frame}{Cạm bẫy và giới hạn}
+  \begin{itemize}
+    \setlength{\itemsep}{0.22cm}
+    \item \textbf{Closure bắt biến ngoài}: Truyền phương thức chứa tham chiếu \texttt{this} hoặc \texttt{BuildContext} $\rightarrow$ kéo theo trạng thái không gửi được qua isolate. Chỉ truyền dữ liệu tối thiểu.
+    \item \textbf{Dữ liệu lớn gây tốn chi phí sao chép}: Đối tượng vào/ra quá đồ sộ làm tăng thời gian copy $\rightarrow$ chỉ gửi dữ liệu thô và nhận kết quả tinh gọn.
+    \item \textbf{Plugin / Platform Channels}: Isolate nền không có sẵn cầu nối Native, cần gọi \texttt{BackgroundIsolateBinaryMessenger} nếu muốn gọi plugin nền tảng.
+    \item \textbf{Nền tảng Flutter Web}: Web là môi trường đơn luồng JavaScript, \texttt{compute()} chỉ chạy trên event loop hiện tại, không tạo luồng mới.
+    \item \textbf{Môi trường Debug}: Chạy ở chế độ Debug sẽ chậm hơn nhiều lần do có cờ kiểm tra $\rightarrow$ cần đo hiệu năng ở chế độ \texttt{--profile} hoặc \texttt{--release}.
+  \end{itemize}
+  \note{Phần kết thúc lý thuyết; chuyển tiếp sang phần thiết kế kiến trúc và giải thích mã nguồn.}
+\end{frame}
+
+% ==============================================================================
+% PHẦN 3 - TỪ LÝ THUYẾT ĐẾN THIẾT KẾ VÀ CODE
+% ==============================================================================
+
+% ------------------------------------------------------------------------------
+% SLIDE 15 - KIẾN TRÚC ỨNG DỤNG VÀ LÝ DO TÁCH TẦNG
+% ------------------------------------------------------------------------------
+\begin{frame}{Kiến trúc ứng dụng và lý do tách tầng}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \centering
+      \begin{tikzpicture}[scale=0.84, every node/.style={transform shape}]
+        % main.dart
+        \node[draw=navyD, fill=navyD!10, rounded corners=3pt, thick, minimum width=3.0cm, minimum height=0.55cm, font=\scriptsize\bfseries] (m) at (2.5, 4.4) {main.dart};
+
+        % UI Layer
+        \draw[fill=purpL!35, draw=purpD!60, rounded corners=5pt] (-0.2, 2.1) rectangle (5.2, 3.8);
+        \node[anchor=west, font=\tiny\bfseries, purpD] at (-0.05, 3.6) {ui/ -- Tầng giao diện (State \& Widget)};
+        \node[draw=grayD, fill=white, rounded corners=2pt, minimum width=4.8cm, minimum height=0.45cm, font=\scriptsize\bfseries] (scr) at (2.5, 3.05) {IsolateDemoScreen};
+        \node[draw=purpD, fill=white, rounded corners=2pt, minimum width=2.2cm, minimum height=0.42cm, font=\fontsize{6pt}{7pt}\selectfont\bfseries] at (1.1, 2.45) {AnimationMonitor};
+        \node[draw=purpD, fill=white, rounded corners=2pt, minimum width=2.2cm, minimum height=0.42cm, font=\fontsize{6pt}{7pt}\selectfont\bfseries] at (3.9, 2.45) {ResultCard};
+
+        % Service Layer
+        \draw[fill=tealL!35, draw=tealD!60, rounded corners=5pt] (-0.2, -0.1) rectangle (5.2, 1.6);
+        \node[anchor=west, font=\tiny\bfseries, tealD] at (-0.05, 1.4) {services/, models/, core/ -- Tầng nghiệp vụ};
+        \node[draw=grayD, fill=white, rounded corners=2pt, minimum width=4.8cm, minimum height=0.45cm, font=\scriptsize\bfseries] (svc) at (2.5, 0.9) {HeavyTaskService};
+        \node[draw=tealD, fill=white, rounded corners=2pt, minimum width=2.2cm, minimum height=0.42cm, font=\fontsize{6pt}{7pt}\selectfont\bfseries] at (1.1, 0.3) {TaskResultModel};
+        \node[draw=tealD, fill=white, rounded corners=2pt, minimum width=2.4cm, minimum height=0.42cm, font=\fontsize{6pt}{7pt}\selectfont\bfseries] at (3.8, 0.3) {TaskExecutionException};
+
+        % Connectors
+        \draw[-{Stealth[length=4pt]}, navyD, thick] (m) -- (2.5, 3.8);
+        \draw[-{Stealth[length=4pt]}, purpD, thick] (2.5, 2.1) -- (2.5, 1.6)
+          node[midway, right=2pt, font=\tiny\bfseries, purpD] {gọi run(mode)};
+        \draw[-{Stealth[length=4pt]}, tealD, thick] (1.1, 1.6) -- (1.1, 2.1)
+          node[midway, left=2pt, font=\tiny\bfseries, tealD] {trả kết quả};
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \vspace{0.15cm}
+      \begin{itemize}
+        \setlength{\itemsep}{0.2cm}
+        \item \textbf{Yêu cầu đề bài $\rightarrow$ Thiết kế}:
+        \begin{itemize}
+          \item Hiệu ứng chuyển động liên tục $\rightarrow$ Tách thành widget \texttt{AnimationMonitor} chuyên dụng.
+          \item Hai nút nhưng \textbf{cùng một tác vụ} $\rightarrow$ Dùng chung đúng một hàm \texttt{\_heavyLoop}.
+          \item Tách biệt trách nhiệm: UI không biết chi tiết isolate, toàn bộ nằm trong \texttt{HeavyTaskService}.
+        \end{itemize}
+        \item Cấu trúc code sạch sẽ, tuân thủ nguyên tắc Single Responsibility.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \note{Nhấn mạnh việc tách tầng giữa UI và Service; UI chỉ gọi run(mode) mà không cần quan tâm chi tiết isolate.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 16 - CODE 1: HÀM TÁC VỤ NẶNG _HEAVYLOOP
+% ------------------------------------------------------------------------------
+\begin{frame}[fragile]{Code 1: hàm tác vụ nặng \texttt{\_heavyLoop}}
+  \vspace{-0.25cm}
+  {\scriptsize\color{grayD} Tệp nguồn: \texttt{lib/services/heavy\_task\_service.dart}}
+  \vspace{0.05cm}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+\begin{lstlisting}
+int _heavyLoop(int iterations) { // (1)
+  if (iterations <= 0) {
+    throw ArgumentError('iterations > 0'); // (4)
+  }
+  var sum = 0;
+  for (var i = 0; i < iterations; i++) { // (3)
+    sum += (i % 7) * (i % 3);
+  }
+  return sum; // (2)
+}
+\end{lstlisting}
+      \vspace{0.1cm}
+      \fcolorbox{purpD}{purpL}{\scriptsize\bfseries Nhận xét:} \scriptsize Cùng 1 hàm cho cả 2 nút $\rightarrow$ so sánh công bằng.
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \scriptsize
+      \begin{enumerate}
+        \setlength{\itemsep}{0.12cm}
+        \item[\cnum{1}] \textbf{Hàm top-level}, đúng 1 tham số -- đúng khuyến nghị của \texttt{compute}.
+        \item[\cnum{2}] Vào/ra đều là \texttt{int} -- \textbf{gửi được} giữa các isolate.
+        \item[\cnum{3}] Vòng lặp \textbf{CPU-bound}, không \texttt{await} -- chạy ở Main Isolate sẽ \textbf{chiếm Event Loop}.
+        \item[\cnum{4}] \texttt{ArgumentError} ném trong isolate nền được \textbf{ném lại ở nơi \texttt{await}}.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \note{Giải thích vì sao phép tính modulo để vòng lặp có công việc thật; kiểm tra 4 quy tắc khớp với lý thuyết.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 17 - CODE 2: HEAVYTASKSERVICE.RUN - HAI CÁCH CHẠY
+% ------------------------------------------------------------------------------
+\begin{frame}[fragile]{Code 2: \texttt{HeavyTaskService.run} -- hai cách chạy}
+  \vspace{-0.25cm}
+  {\scriptsize\color{grayD} Tệp nguồn: \texttt{lib/services/heavy\_task\_service.dart}}
+  \vspace{0.05cm}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{6pt}{7pt}\selectfont]
+Future<TaskResultModel> run(ExecutionMode mode,
+    {int iterations = defaultIterations}) async {
+  final stopwatch = Stopwatch()..start(); // (5)
+  try {
+    final int sum;
+    if (mode == ExecutionMode.mainThread) {
+      await Future<void>.delayed(
+          const Duration(milliseconds: 50)); // (1)
+      sum = _heavyLoop(iterations); // (2)
+    } else {
+      sum = await compute(_heavyLoop, iterations); // (3)
+    }
+    stopwatch.stop();
+    return TaskResultModel(mode: mode, sum: sum,
+        durationMs: stopwatch.elapsedMilliseconds);
+  } catch (e) {
+    throw TaskExecutionException('Task failed', e); // (4)
+  }
+}
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \scriptsize
+      \begin{enumerate}
+        \setlength{\itemsep}{0.08cm}
+        \item[\cnum{1}] \texttt{delayed(50ms)} nhường Event Loop 1 nhịp để UI kịp vẽ trạng thái.
+        \item[\cnum{2}] Chạy trực tiếp trên Main Isolate -- chiếm UI thread $\rightarrow$ \textbf{Freeze}.
+        \item[\cnum{3}] \texttt{compute} tạo isolate nền, chạy ngầm, Main Isolate vẫn vẽ frame.
+        \item[\cnum{4}] Bọc ngoại lệ thành \texttt{TaskExecutionException}.
+        \item[\cnum{5}] \texttt{Stopwatch} đo thời gian thực thi trọn vẹn cả chi phí spawn/copy.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \note{Slide quan trọng nhất của phần code; đối chiếu hai nhánh chạy trực tiếp và chạy qua compute; giải thích vai trò của Future.delayed.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 18 - CODE 3: GIAO DIỆN - "CẢM BIẾN" VÀ ĐIỀU KHIỂN
+% ------------------------------------------------------------------------------
+\begin{frame}[fragile]{Code 3: giao diện -- "cảm biến" và điều khiển}
+  \vspace{-0.25cm}
+  {\scriptsize\color{grayD} Tệp nguồn: \texttt{animation\_monitor.dart} \& \texttt{isolate\_demo\_screen.dart}}
+  \vspace{0.05cm}
+  \begin{columns}[T]
+    \begin{column}{0.58\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{6pt}{7pt}\selectfont]
+// AnimationMonitor (abridged)
+const Row(children: [
+  SizedBox(width: 48, height: 48,
+    child: CircularProgressIndicator(strokeWidth: 5)), // (1)
+  Expanded(child: LinearProgressIndicator(minHeight: 8)),
+])
+\end{lstlisting}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{6pt}{7pt}\selectfont]
+// _handleRun (abridged)
+setState(() { _isRunning = true; }); // (2)
+try {
+  final result = await _service.run(mode); // (3)
+  if (!mounted) return; // (4)
+  setState(() => _result = result);
+} on TaskExecutionException catch (e) { /* show error */ } // (5)
+finally { if (mounted) setState(() => _isRunning = false); }
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \scriptsize
+      \begin{enumerate}
+        \setlength{\itemsep}{0.08cm}
+        \item[\cnum{1}] Indicator vẽ lại \textbf{mỗi frame} -- "cảm biến": Nếu UI thread bị chặn, vòng quay \textbf{lập tức đứng}.
+        \item[\cnum{2}] \texttt{setState} khoá cả 2 nút, ngăn bấm chồng.
+        \item[\cnum{3}] \texttt{await} ở UI chỉ chờ Future, không chặn Event Loop.
+        \item[\cnum{4}] Kiểm tra \texttt{mounted} an toàn.
+        \item[\cnum{5}] Bắt đúng \texttt{TaskExecutionException}; \texttt{finally} luôn mở khoá nút.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \note{AnimationMonitor là công cụ trực quan để nhìn thấy freeze; setState quản lý trạng thái an toàn với mounted.}
+\end{frame}
+
+% ==============================================================================
+% PHẦN 4 - DEMO VÀ KẾT LUẬN
+% ==============================================================================
+
+% ------------------------------------------------------------------------------
+% SLIDE 19 - DEMO: CÙNG MỘT TÁC VỤ, HAI CÁCH CHẠY
+% ------------------------------------------------------------------------------
+\begin{frame}{Demo: cùng một tác vụ, hai cách chạy}
+  \vspace{-0.15cm}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.48\textwidth}
+      \textbf{Kịch bản thực hiện (app thực tế):}
+      \vspace{0.15cm}
+      \begin{enumerate}
+        \setlength{\itemsep}{0.12cm}
+        \item Quan sát \texttt{AnimationMonitor} xoay mượt mà.
+        \item Bấm \textbf{Nút 1 (Main Thread)}:
+        \begin{itemize}
+          \item Vòng quay lập tức \textbf{đứng (Freeze)}.
+          \item UI hoàn toàn không phản hồi thao tác.
+        \end{itemize}
+        \item Bấm \textbf{Nút 2 (\texttt{compute})}:
+        \begin{itemize}
+          \item Vòng quay \textbf{vẫn xoay mượt mà}.
+          \item Kết quả hiện sau khi tính xong.
+        \end{itemize}
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \centering
+      \vspace{0.1cm}
+      \begin{tabular}{@{}c@{\hspace{0.2cm}}c@{}}
+        \ph{2.9cm}{3.8cm}{Màn hình\\ứng dụng} & \ph{2.9cm}{3.8cm}{Performance\\Overlay}
+      \end{tabular}
+    \end{column}
+  \end{columns}
+  \note{Chuyển sang chạy app thật. Nhắc nhở: chạy trên thiết bị thật hoặc emulator, không dùng Chrome.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 20 - KẾT QUẢ ĐO THỰC TẾ
+% ------------------------------------------------------------------------------
+\begin{frame}{Kết quả đo thực tế}
+  \vspace{-0.15cm}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.54\textwidth}
+      \resizebox{\linewidth}{!}{%
+        \renewcommand{\arraystretch}{1.1}%
+        \begin{tabular}{>{\raggedright\arraybackslash}p{2.3cm} c c}
+          \toprule
+          \rowcolor{navyD}
+          \textcolor{white}{\textbf{Chỉ số đo}} & \textcolor{white}{\textbf{Nút 1: Main Thread}} & \textcolor{white}{\textbf{Nút 2: \texttt{compute()}}} \\
+          \midrule
+          \rowcolor{grayL!50}
+          \textbf{Thời gian thực thi} & \textbf{1.842 ms} & \textbf{1.868 ms} \\
+          \textbf{Animation quay} & \textcolor{redD}{\bfseries Đứng hình} & \textcolor{tealD}{\bfseries Mượt mà} \\
+          \rowcolor{grayL!50}
+          \textbf{UI Thread Frame} & \textcolor{redD}{\bfseries Block 1.842 ms} & \textcolor{tealD}{\bfseries Ổn định $\le$ 16,6 ms} \\
+          \textbf{Phản hồi thao tác} & \textcolor{redD}{\bfseries Đơ hoàn toàn} & \textcolor{tealD}{\bfseries Phản hồi ngay} \\
+          \bottomrule
+        \end{tabular}%
+      }
+
+      \vspace{0.12cm}
+      \begin{itemize}
+        \setlength{\itemsep}{0.08cm}
+        \scriptsize
+        \item \textbf{\texttt{compute} không làm tính toán nhanh hơn}: Chênh lệch $\sim$ 26 ms do chi phí khởi tạo Isolate và sao chép dữ liệu.
+        \item \textbf{Lợi ích cốt lõi là tính phản hồi (Responsiveness)}: Giải phóng hoàn toàn Main Thread để dựng hình liên tục.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \centering
+      \vspace{0.05cm}
+      \resizebox{\linewidth}{!}{\ph{5.4cm}{3.8cm}{Ảnh chụp kết quả đo thực tế\\(DevTools Performance / CPU Profiler)\\\tiny Hiển thị vạch đỏ nghẽn frame (Nút 1)\\vs vạch xanh ổn định (Nút 2)}}
+    \end{column}
+  \end{columns}
+  \note{Trình bày bảng số đo thực tế và ảnh chụp từ DevTools: compute tốn thêm chút ít thời gian spawn/copy nhưng đổi lại giao diện mượt mà tuyệt đối.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 21 - KẾT LUẬN
+% ------------------------------------------------------------------------------
+\begin{frame}{Kết luận}
+  \vspace{0.2cm}
+  \begin{enumerate}
+    \setlength{\itemsep}{0.35cm}
+    \item \textbf{Bản chất vấn đề}: Tác vụ CPU-bound nặng chạy đồng bộ trên Main Isolate làm \textbf{chiếm dụng Event Loop}, khiến sự kiện vẽ frame bị bỏ lỡ $\rightarrow$ gây ra UI Jank và UI Freeze.
+
+    \item \textbf{Bản chất giải pháp}: \textbf{Dart Isolate} giải quyết tận gốc bằng mô hình không chia sẻ đối tượng (bộ nhớ riêng, Event Loop riêng, message passing). Trong Flutter, hàm \textbf{\texttt{compute()}} là giải pháp gọn gàng và chuẩn mực nhất cho tác vụ chạy một lần.
+
+    \item \textbf{Đánh đổi kỹ thuật}: Tạo Isolate luôn tốn chi phí khởi tạo (spawn) và sao chép dữ liệu (copy) $\rightarrow$ \textbf{chỉ dùng khi tác vụ đủ nặng để có nguy cơ làm rớt frame}.
+  \end{enumerate}
+  \note{Tóm tắt 3 thông điệp chính: chiếm Event Loop, Isolate giải phóng UI thread, và đánh đổi chi phí spawn/copy.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 22 - PHÂN CÔNG VÀ MÃ NGUỒN
+% ------------------------------------------------------------------------------
+\begin{frame}{Phân công và mã nguồn}
+  \begin{table}
+    \scriptsize
+    \centering
+    \begin{tabular}{c p{2.8cm} >{\raggedright\arraybackslash}p{6.8cm} c}
+      \toprule
+      \rowcolor{navyD}
+      \textcolor{white}{\textbf{TT}} & \textcolor{white}{\textbf{Họ và tên}} & \textcolor{white}{\textbf{Nội dung phụ trách}} & \textcolor{white}{\textbf{Đóng góp}} \\
+      \midrule
+      \rowcolor{grayL!50}
+      1 & Nguyễn Đức Hải & \textbf{Business Logic, Lý thuyết}: Xây dựng \texttt{task\_execution\_exception.dart}, \texttt{task\_result\_model.dart}, \texttt{heavy\_task\_service.dart}; Slide 3--14 & 50\% \\
+      2 & Phạm Thị Hồng Nhung -- 106230021 & \textbf{UI, State, Demo}: Xây dựng \texttt{isolate\_demo\_screen.dart}, \texttt{animation\_monitor.dart}, \texttt{result\_card.dart}, \texttt{main.dart}, README; Slide 15--20 & 50\% \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  \vspace{0.35cm}
+  \begin{center}
+    \textbf{Mã nguồn dự án trên GitHub:}\\
+    \vspace{0.1cm}
+    \fcolorbox{grayD!30}{grayL}{\texttt{https://github.com/[URL repo]}}
+  \end{center}
+  \note{Nhóm phân chia công việc cân bằng 50/50 theo đúng hai mảng lý thuyết và thực nghiệm mã nguồn.}
+\end{frame}
+
+% ------------------------------------------------------------------------------
+% SLIDE 23 - HỎI ĐÁP
+% ------------------------------------------------------------------------------
+\begin{frame}
+  \vfill
+  \begin{center}
+    {\huge\bfseries Cảm ơn thầy/cô đã lắng nghe!\par}
+    \vspace{0.6cm}
+    {\Large\color{purpD}\bfseries Xin mời thầy/cô và các bạn đặt câu hỏi\par}
+  \end{center}
+  \vfill
+  \note{Cảm ơn hội đồng; sẵn sàng chuyển sang slide tài liệu tham khảo để giải đáp thắc mắc chi tiết.}
+\end{frame}
+
+% ==============================================================================
+% PHẦN PHỤ LỤC (BACKUP SLIDES - KHÔNG TÍNH VÀO TỔNG SỐ SLIDE N)
+% ==============================================================================
+\appendix
+
+% ------------------------------------------------------------------------------
+% TÀI LIỆU THAM KHẢO
+% ------------------------------------------------------------------------------
+\begin{frame}{Tài liệu tham khảo}
+  \begin{enumerate}
+    \setlength{\itemsep}{0.25cm}
+    \item Flutter Docs, \textit{Concurrency and isolates}.\\
+    \url{https://docs.flutter.dev/perf/isolates}
+    \item Flutter API, \textit{compute function}.\\
+    \url{https://api.flutter.dev/flutter/foundation/compute.html}
+    \item Dart Docs, \textit{Concurrency in Dart}.\\
+    \url{https://dart.dev/language/concurrency}
+    \item Flutter Docs, \textit{Improving rendering performance}.\\
+    \url{https://docs.flutter.dev/perf/rendering-performance}
+    \item Flutter Docs, \textit{Flutter's build modes}.\\
+    \url{https://docs.flutter.dev/testing/build-modes}
+  \end{enumerate}
+  \note{Các tài liệu chuẩn từ Flutter và Dart official documentation được nhóm sử dụng để làm nguồn tham chiếu.}
+\end{frame}
+
+\end{document}
