@@ -38,7 +38,7 @@ Trong các ứng dụng Flutter, giao diện người dùng được dựng và 
 
 | TT | Họ và tên | MSSV | Vai trò | Nội dung phụ trách | Tỷ lệ đóng góp |
 | :---: | :--- | :---: | :--- | :--- | :---: |
-| 1 | Nguyễn Đức Hải | hainguyen0412 | Business Logic & Lý thuyết | Triển khai `task_execution_exception.dart`, `task_result_model.dart`, `heavy_task_service.dart`; nghiên cứu cơ chế Event Loop, Isolate và hàm `compute()`. | 50% |
+| 1 | Nguyễn Đức Hải | 106230043 | Business Logic & Lý thuyết | Triển khai `task_execution_exception.dart`, `task_result_model.dart`, `heavy_task_service.dart`; nghiên cứu cơ chế Event Loop, Isolate và hàm `compute()`. | 50% |
 | 2 | Phạm Thị Hồng Nhung | 106230021 | UI, State & Demo | Triển khai `isolate_demo_screen.dart`, `animation_monitor.dart`, `result_card.dart`, `main.dart`, tài liệu `README.md`, thực hiện đo đạc và quay video demo. | 50% |
 
 ---
